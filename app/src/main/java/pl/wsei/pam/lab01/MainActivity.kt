@@ -95,7 +95,7 @@ class MainActivity : AppCompatActivity() {
     // Wykonaj dzielenie niecałkowite parametru a przez b
     // Wynik zwróć po instrukcji return
     private fun task11(a: Int, b: Int): Double {
-        return 0.0
+        return a/b.toDouble()
     }
 
     // Zdefiniuj funkcję, która zwraca łańcuch dla argumentów bez znaku (zawsze dodatnie) wg schematu
@@ -103,12 +103,16 @@ class MainActivity : AppCompatActivity() {
     // np. dla parametrów a = 2 i b = 3
     // 2 + 3 = 5
     private fun task12(a: UInt, b: UInt): String {
-        return ""
+        return "$a + $b = ${a+b}"
     }
 
     // Zdefiniu funkcję, która zwraca wartość logiczną, jeśli parametr `a` jest nieujemny i mniejszy od `b`
     fun task13(a: Double, b: Float): Boolean {
-        return false
+        var result : Boolean = false
+        if(a>=0 && a<b){
+            result=true;
+        }
+        return result
     }
 
     // Zdefiniuj funkcję, która zwraca łańcuch dla argumentów całkowitych ze znakiem wg schematu
@@ -121,7 +125,10 @@ class MainActivity : AppCompatActivity() {
     // Wskazówki:
     // Math.abs(a) - zwraca wartość bezwględną
     fun task14(a: Int, b: Int): String {
-       return ""
+        if(b<0){
+            return "$a - ${Math.abs(b)} = ${a+b}"
+        }
+        return "$a + $b = ${a+b}"
     }
 
     // Zdefiniuj funkcję zwracającą ocenę jako liczbę całkowitą na podstawie łańcucha z opisem słownym oceny.
@@ -134,7 +141,17 @@ class MainActivity : AppCompatActivity() {
     // Funkcja nie powinna być wrażliwa na wielkość znaków np. Dobry, DORBRY czy DoBrY to ta sama ocena
     // Wystąpienie innego łańcucha w degree funkcja zwraca wartość -1
     fun task15(degree: String): Int {
-        return 0
+        val formattedDegree = degree.lowercase()
+
+        val result = when (formattedDegree){
+            "bardzo dobry" -> 5
+            "dobry" -> 4
+            "dostateczny" -> 3
+            "dopuszczający" -> 2
+            "niedostateczny" -> 1
+            else -> -1
+        }
+        return result
     }
 
     // Zdefiniuj funkcję zwracającą liczbę możliwych do zbudowania egzemplarzy, które składają się z elementów umieszczonych w asset
