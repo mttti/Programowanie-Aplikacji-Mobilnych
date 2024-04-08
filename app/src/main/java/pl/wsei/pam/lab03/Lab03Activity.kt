@@ -1,10 +1,18 @@
 package pl.wsei.pam.lab03
 
+import android.animation.Animator
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
+import android.media.MediaPlayer
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.PersistableBundle
 import android.view.Gravity
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.widget.GridLayout
 import android.widget.ImageButton
 import android.widget.Toast
@@ -12,11 +20,53 @@ import pl.wsei.pam.lab01.R
 import java.util.Stack
 import java.util.Timer
 import kotlin.concurrent.schedule
+import kotlin.random.Random
 
 class Lab03Activity : AppCompatActivity() {
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean  {
+        val inflater: MenuInflater = getMenuInflater()
+        inflater.inflate(R.menu.board_activity_menu, menu)
+        return true
+    }
+
+    var isSound = true;
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when(item.getItemId()){
+            R.id.board_activity_sound -> {
+                if (item.getIcon()?.getConstantState()?.equals(getResources().getDrawable(R.drawable.baseline_volume_up_24, getTheme()).getConstantState()) == true) {
+                    Toast.makeText(this, "Sound turn off", Toast.LENGTH_SHORT).show();
+                    item.setIcon(R.drawable.baseline_volume_off_24)
+                    isSound = false;
+                } else {
+                    Toast.makeText(this, "Sound turn on", Toast.LENGTH_SHORT).show()
+                    item.setIcon(R.drawable.baseline_volume_up_24)
+                    isSound = true
+                }
+            }
+        }
+        return false
+    }
+
+    lateinit var completionPlayer: MediaPlayer
+    lateinit var negativePLayer: MediaPlayer
+    override fun onResume() {
+        super.onResume()
+        completionPlayer = MediaPlayer.create(applicationContext, R.raw.completion)
+        negativePLayer = MediaPlayer.create(applicationContext, R.raw.negative_guitar)
+    }
+
+
+    override fun onPause() {
+        super.onPause();
+        completionPlayer.release()
+        negativePLayer.release()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_lab03)
+
 
         val size = intent.getIntArrayExtra("size") ?: intArrayOf(3, 3)
 
@@ -28,45 +78,64 @@ class Lab03Activity : AppCompatActivity() {
             //kod odczytu stanu z savedInstanceState
             //utworznie modelu planszy i przywrócenia stanu zapisanego przed oborotem
         } else {
-            //kod pierwszego uruchomienia aktywności, utworzenie modelu planszy
+            val mBoardModel = MemoryBoardView(gridLayout = mBoard, cols = size[0], rows = size[1])
 
-        val mBoardModel = MemoryBoardView(gridLayout = mBoard, cols = size[0], rows = size[1])
-
-        mBoardModel.setOnGameChangeListener { e ->
-            run {
-                when (e.state) {
-                    GameStates.Matching -> {
-                        for (tile in e.tiles) {
-                            tile.revealed = true
-                        }
-                    }
-
-                    GameStates.Match -> {
-                        for (tile in e.tiles) {
-                            tile.revealed = true
-                        }
-                    }
-
-                    GameStates.NoMatch -> {
-
-                        for (tile in e.tiles) {
-                            tile.revealed = true
-                            Timer().schedule(2000) {
-                                runOnUiThread() {
-                                    tile.revealed = false
-                                }
+            mBoardModel.setOnGameChangeListener { e ->
+                run {
+                    when (e.state) {
+                        GameStates.Matching -> {
+                            for (tile in e.tiles) {
+                                tile.revealed = true
                             }
-
                         }
-                    }
 
-                    GameStates.Finished -> {
+                        GameStates.Match -> {
+                            for (tile in e.tiles) {
+                                tile.revealed = true
+                                if(isSound){
+                                    completionPlayer.start()
+                                }
+                                animatePairedButton(
+                                    button = tile.button,
+                                    action = { tile.button.isClickable = false }
+                                )
+                            }
+                        }
 
-                        Toast.makeText(this, "Game finished", Toast.LENGTH_SHORT).show()
+                        GameStates.NoMatch -> {
+
+                            for (tile in e.tiles) {
+                                tile.revealed = true
+                                if (isSound){
+
+                                    negativePLayer.start()
+                                }
+                                animateFailedToPairButton(tile.button, action = {})
+                                Timer().schedule(2000) {
+                                    runOnUiThread() {
+                                        tile.revealed = false
+
+                                    }
+                                }
+
+                            }
+                        }
+
+                        GameStates.Finished -> {
+                            for (tile in e.tiles) {
+                                tile.revealed = true
+                                completionPlayer.start()
+
+                                animatePairedButton(
+                                    button = tile.button,
+                                    action = { tile.button.isClickable = false }
+                                )
+                            }
+                            Toast.makeText(this, "Game finished", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
-        }
         }
     }
 
@@ -222,4 +291,90 @@ class Lab03Activity : AppCompatActivity() {
             tiles[button.tag.toString()] = tile
         }
     }
+}
+
+
+private fun animatePairedButton(button: ImageButton, action: Runnable) {
+    val set = AnimatorSet()
+    val random = Random
+    button.pivotX = random.nextFloat() * 200f
+    button.pivotY = random.nextFloat() * 200f
+
+    val rotation = ObjectAnimator.ofFloat(button, "rotation", 1080f)
+    val scallingX = ObjectAnimator.ofFloat(button, "scaleX", 1f, 4f)
+    val scallingY = ObjectAnimator.ofFloat(button, "scaleY", 1f, 4f)
+    val fade = ObjectAnimator.ofFloat(button, "alpha", 1f, 0f)
+    set.startDelay = 500
+    set.duration = 2000
+    set.interpolator = DecelerateInterpolator()
+    set.playTogether(rotation, scallingX, scallingY, fade)
+    set.addListener(object : Animator.AnimatorListener {
+
+        override fun onAnimationStart(animator: Animator) {
+        }
+
+        override fun onAnimationEnd(animator: Animator) {
+            button.scaleX = 1f
+            button.scaleY = 1f
+            button.alpha = 0.0f
+            button.isActivated = false
+            action.run();
+        }
+
+        override fun onAnimationCancel(animator: Animator) {
+        }
+
+        override fun onAnimationRepeat(animator: Animator) {
+        }
+    })
+    set.start()
+}
+
+private fun animateFailedToPairButton(button: ImageButton, action: Runnable) {
+
+    val set = AnimatorSet()
+    val random = Random
+    button.pivotX = random.nextFloat() * 200f
+    button.pivotY = random.nextFloat() * 200f
+
+    val rotationRight = ObjectAnimator.ofFloat(button, "rotation", 10f)
+    val rotationLeft = ObjectAnimator.ofFloat(button, "rotation", -10f)
+    val rotationZero = ObjectAnimator.ofFloat(button, "rotation", 0f)
+
+
+    set.startDelay = 100
+    set.duration = 200
+    set.interpolator = DecelerateInterpolator()
+    //set.play(rotationRight)
+
+    //set.play(rotationLeft)
+    set.playSequentially(rotationLeft, rotationRight, rotationZero)
+    //set.playSequentially(rotationLeft,rotationRight,rotationZero)
+    //set.play(rotationZero)
+    //set.playTogether(rotationRight, rotationLeft, rotationZero)//, scallingX, scallingY)//, fade)
+    set.addListener(object : Animator.AnimatorListener {
+
+        override fun onAnimationStart(animator: Animator) {
+        }
+
+        override fun onAnimationEnd(animator: Animator) {
+
+
+            //button.scaleX = 1f
+            //button.scaleY = 1f
+            button.rotation = 0f
+            button.alpha = 1f
+
+            action.run();
+        }
+
+        override fun onAnimationCancel(animator: Animator) {
+        }
+
+        override fun onAnimationRepeat(animator: Animator) {
+
+
+        }
+    })
+    set.start()
 }
