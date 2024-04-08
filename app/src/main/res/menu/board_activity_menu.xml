@@ -6,4 +6,5 @@
         android:icon="@drawable/baseline_volume_up_24"
         app:showAsAction="always"
         android:title="@string/board_activity_menu_sound" />
+
 </menu>
